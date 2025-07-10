@@ -160,9 +160,10 @@
         }
 
         .slot-blocked {
-            background: #f3f4f6;
-            color: #6b7280;
+            background: #7f1d1d;
+            color: white;
             cursor: default;
+            font-weight: bold;
         }
 
         .slot-blocked.admin-view {
@@ -324,14 +325,73 @@
             font-size: 14px;
         }
 
-        .connection-status {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 12px;
+        .customer-list {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+        }
+
+        .customer-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .customer-item.today {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .customer-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .customer-name {
             font-weight: bold;
+            color: #1f2937;
+            font-size: 16px;
+        }
+
+        .customer-time {
+            color: #6b7280;
+            font-size: 14px;
+            background: #f3f4f6;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .customer-phone {
+            color: #4b5563;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .customer-note {
+            color: #059669;
+            font-size: 14px;
+            font-style: italic;
+            background: #ecfdf5;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .no-customers {
+            text-align: center;
+            color: #6b7280;
+            padding: 40px;
+            font-style: italic;
         }
 
         .connection-status.online {
@@ -458,6 +518,15 @@
                     </div>
                 </div>
                 
+                <div class="admin-block-form">
+                    <h4>Müşteri Bilgileri</h4>
+                    <button class="btn" onclick="showCustomerList()">Tüm Müşteri Bilgilerini Göster</button>
+                    
+                    <div class="customer-list" id="customerList" style="margin-top: 15px;">
+                        <div id="customerListContent"></div>
+                    </div>
+                </div>
+                
                 <button class="btn btn-danger" onclick="adminLogout()">Çıkış Yap</button>
             </div>
 
@@ -481,12 +550,12 @@
                     <thead>
                         <tr>
                             <th>Saat</th>
-                            <th>Pazartesi</th>
-                            <th>Salı</th>
-                            <th>Çarşamba</th>
-                            <th>Perşembe</th>
-                            <th>Cuma</th>
-                            <th>Cumartesi</th>
+                            <th>Gün 1</th>
+                            <th>Gün 2</th>
+                            <th>Gün 3</th>
+                            <th>Gün 4</th>
+                            <th>Gün 5</th>
+                            <th>Gün 6</th>
                         </tr>
                     </thead>
                     <tbody id="calendarBody">
@@ -519,7 +588,7 @@
                 </div>
                 <div class="form-group">
                     <label>Not (Opsiyonel):</label>
-                    <textarea id="customerNote" placeholder="Ek bilgi veya not..."></textarea>
+                    <textarea id="customerNote" placeholder="Örneğin: Tek geleceğim, 1 çocuk ile geleceğim vs..."></textarea>
                 </div>
                 <div id="existingBookingInfo" class="booking-info" style="display: none;">
                     <h4>Mevcut Randevu Bilgileri:</h4>
@@ -595,14 +664,14 @@
         function isPastDate(dayName, weekOffset) {
             const today = new Date();
             const currentDay = today.getDay();
-            const currentTime = today.getHours() * 60 + today.getMinutes();
             
-            // Bugünkü hafta mı?
-            if (weekOffset !== 0) {
-                return weekOffset < 0; // Geçmiş hafta
-            }
+            // Geçmiş hafta
+            if (weekOffset < 0) return true;
             
-            // Bugünkü haftada hangi gün?
+            // Gelecek hafta
+            if (weekOffset > 0) return false;
+            
+            // Bu hafta - bugünden önceki günler
             const dayIndex = dayNames.indexOf(dayName);
             const targetDay = dayIndex + 1; // Pazartesi = 1, Salı = 2, ...
             
@@ -617,7 +686,6 @@
         function isPastTime(dayName, time, weekOffset) {
             const today = new Date();
             const currentDay = today.getDay();
-            const currentTime = today.getHours() * 60 + today.getMinutes();
             
             // Geçmiş hafta
             if (weekOffset < 0) return true;
@@ -625,22 +693,18 @@
             // Gelecek hafta
             if (weekOffset > 0) return false;
             
-            // Bu hafta
+            // Bu hafta - bugünden önceki günler
             const dayIndex = dayNames.indexOf(dayName);
             const targetDay = dayIndex + 1;
             
-            // Bugün değilse
             if (currentDay === 0) { // Pazar
                 return targetDay < 7;
-            } else if (targetDay !== currentDay) {
-                return targetDay < currentDay;
+            } else if (targetDay < currentDay) {
+                return true; // Geçmiş günler
             }
             
-            // Bugünse saate bak
-            const [hours, minutes] = time.split(':').map(Number);
-            const timeInMinutes = hours * 60 + minutes;
-            
-            return timeInMinutes <= currentTime;
+            // Bugün ise her saat rezerve edilebilir
+            return false;
         }
 
         // Bildirim gösterme
@@ -865,11 +929,70 @@
         // Takvim renderı
         function renderCalendar() {
             const calendarBody = document.getElementById('calendarBody');
+            const calendarHeader = document.getElementById('calendarTable').querySelector('thead tr');
             calendarBody.innerHTML = '';
 
-            const weekStart = getWeekStart(currentWeek);
-            document.getElementById('currentWeek').textContent = 
-                `${formatDate(weekStart)} - ${formatDate(new Date(weekStart.getTime() + 5 * 24 * 60 * 60 * 1000))}`;
+            // Bugünden itibaren 6 gün hesapla
+            const today = new Date();
+            const currentWeekStart = getWeekStart(currentWeek);
+            
+            // Bugünden itibaren 6 günü hesapla
+            const visibleDays = [];
+            const visibleDates = [];
+            
+            if (currentWeek === 0) {
+                // Bu hafta - bugünden itibaren 6 gün
+                for (let i = 0; i < 6; i++) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() + i);
+                    const dayName = getDayName(date.getDay());
+                    if (dayName) { // Pazar hariç
+                        visibleDays.push(dayName);
+                        visibleDates.push(new Date(date));
+                    }
+                }
+            } else if (currentWeek > 0) {
+                // Gelecek hafta - tüm günler
+                for (let i = 0; i < 6; i++) {
+                    const date = new Date(currentWeekStart);
+                    date.setDate(currentWeekStart.getDate() + i);
+                    const dayName = getDayName(date.getDay());
+                    if (dayName) {
+                        visibleDays.push(dayName);
+                        visibleDates.push(new Date(date));
+                    }
+                }
+            } else {
+                // Geçmiş hafta - boş
+                visibleDays = [];
+                visibleDates = [];
+            }
+
+            // Tablo başlığını güncelle
+            calendarHeader.innerHTML = '<th>Saat</th>';
+            for (let i = 0; i < visibleDays.length; i++) {
+                const dayName = visibleDays[i];
+                const date = visibleDates[i];
+                const dateStr = formatDate(date);
+                calendarHeader.innerHTML += `<th>${dayName}<br><small>${dateStr}</small></th>`;
+            }
+
+            // Boş günleri tamamla (6 gün olması için)
+            while (visibleDays.length < 6) {
+                visibleDays.push('');
+                visibleDates.push(null);
+                calendarHeader.innerHTML += '<th>-</th>';
+            }
+
+            // Hafta bilgisini güncelle
+            if (visibleDates.length > 0 && visibleDates[0] && visibleDates[visibleDates.length - 1]) {
+                const firstDate = visibleDates[0];
+                const lastDate = visibleDates[visibleDates.length - 1];
+                document.getElementById('currentWeek').textContent = 
+                    `${formatDate(firstDate)} - ${formatDate(lastDate)}`;
+            } else {
+                document.getElementById('currentWeek').textContent = 'Geçmiş Hafta';
+            }
 
             timeSlots.forEach(time => {
                 const row = document.createElement('tr');
@@ -881,48 +1004,54 @@
                 row.appendChild(timeCell);
 
                 // Gün sütunları
-                dayNames.forEach((dayName, dayIndex) => {
+                for (let i = 0; i < 6; i++) {
                     const cell = document.createElement('td');
-                    const booking = bookings.find(b => b.day === dayName && b.time === time);
-                    const isPast = isPastTime(dayName, time, currentWeek);
+                    const dayName = visibleDays[i];
                     
-                    if (isPast) {
-                        cell.textContent = 'Geçmiş';
+                    if (!dayName) {
+                        cell.textContent = '-';
                         cell.className = 'slot-past';
-                    } else if (booking) {
-                        if (booking.type === 'blocked') {
-                            cell.textContent = 'Bloke';
-                            cell.className = `slot-blocked ${isAdmin ? 'admin-view' : ''}`;
-                            if (isAdmin) {
-                                cell.onclick = () => showBookingForm(dayName, time, booking);
+                    } else {
+                        const booking = bookings.find(b => b.day === dayName && b.time === time);
+                        
+                        if (booking) {
+                            if (booking.type === 'blocked') {
+                                cell.textContent = 'Bloke';
+                                cell.className = `slot-blocked ${isAdmin ? 'admin-view' : ''}`;
+                                if (isAdmin) {
+                                    cell.onclick = () => showBookingForm(dayName, time, booking);
+                                }
+                            } else {
+                                cell.textContent = 'Dolu';
+                                cell.className = `slot-booked ${isAdmin ? 'admin-view' : ''}`;
+                                if (isAdmin) {
+                                    cell.onclick = () => showBookingForm(dayName, time, booking);
+                                }
                             }
                         } else {
-                            cell.textContent = 'Dolu';
-                            cell.className = `slot-booked ${isAdmin ? 'admin-view' : ''}`;
-                            if (isAdmin) {
-                                cell.onclick = () => showBookingForm(dayName, time, booking);
-                            }
+                            cell.textContent = 'Boş';
+                            cell.className = 'slot-available';
+                            cell.onclick = () => showBookingForm(dayName, time);
                         }
-                    } else {
-                        cell.textContent = 'Boş';
-                        cell.className = 'slot-available';
-                        cell.onclick = () => showBookingForm(dayName, time);
                     }
                     
                     row.appendChild(cell);
-                });
+                }
                 
                 calendarBody.appendChild(row);
             });
         }
 
+        // Gün ismini al (Pazar hariç)
+        function getDayName(dayIndex) {
+            const days = ['', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+            return days[dayIndex];
+        }
+
         // Randevu formu gösterme
         window.showBookingForm = function(day, time, existingBooking = null) {
-            // Geçmiş tarih kontrolü
-            if (isPastTime(day, time, currentWeek)) {
-                showNotification('Geçmiş tarihlere randevu verilemez!', true);
-                return;
-            }
+            // Geçmiş gün kontrolü - artık güncel sistem ile kontrol edilmez
+            // çünkü sadece bugünden itibaren 6 gün gösteriliyor
 
             // Dolu slot kontrolü (admin değilse)
             const slotBooking = bookings.find(b => b.day === day && b.time === time);
@@ -1205,6 +1334,95 @@
             document.getElementById('thisWeekBookings').textContent = thisWeekBookings;
             document.getElementById('availableSlots').textContent = availableSlots;
         }
+
+        // Müşteri listesini göster
+        window.showCustomerList = async function() {
+            if (!isAdmin) return;
+            
+            try {
+                // Bugünden itibaren tüm randevuları al
+                const allBookings = [];
+                
+                // Bu hafta ve sonraki haftaları kontrol et
+                for (let week = 0; week <= 4; week++) {
+                    const weekKey = getWeekKey(week);
+                    const q = query(
+                        collection(db, 'bookings'),
+                        where('weekKey', '==', weekKey),
+                        where('type', '==', 'booking')
+                    );
+                    
+                    const snapshot = await getDocs(q);
+                    snapshot.forEach((doc) => {
+                        const booking = { id: doc.id, ...doc.data() };
+                        
+                        // Bugünden itibaren olan randevuları ekle
+                        if (!isPastTime(booking.day, booking.time, week)) {
+                            allBookings.push({
+                                ...booking,
+                                weekOffset: week,
+                                sortKey: `${week}-${dayNames.indexOf(booking.day)}-${booking.time}`
+                            });
+                        }
+                    });
+                }
+                
+                // Sıralama: hafta, gün, saat
+                allBookings.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+                
+                displayCustomerList(allBookings);
+                
+            } catch (error) {
+                console.error('Müşteri bilgileri yüklenirken hata:', error);
+                showNotification('Müşteri bilgileri yüklenirken hata oluştu!', true);
+            }
+        };
+
+        // Müşteri listesini göster
+        function displayCustomerList(bookings) {
+            const customerListContent = document.getElementById('customerListContent');
+            
+            if (bookings.length === 0) {
+                customerListContent.innerHTML = '<div class="no-customers">Henüz randevu bulunmamaktadır.</div>';
+            } else {
+                let html = '';
+                const today = new Date();
+                const currentDay = today.getDay();
+                
+                bookings.forEach(booking => {
+                    const weekStart = getWeekStart(booking.weekOffset);
+                    const dayIndex = dayNames.indexOf(booking.day);
+                    const bookingDate = new Date(weekStart);
+                    bookingDate.setDate(bookingDate.getDate() + dayIndex);
+                    
+                    const isToday = booking.weekOffset === 0 && 
+                                   ((currentDay === 0 && dayIndex === 6) || 
+                                    (currentDay !== 0 && dayIndex === currentDay - 1));
+                    
+                    html += `
+                        <div class="customer-item ${isToday ? 'today' : ''}">
+                            <div class="customer-header">
+                                <div class="customer-name">${booking.customerName}</div>
+                                <div class="customer-time">${booking.day} - ${booking.time}</div>
+                            </div>
+                            <div class="customer-phone">📞 ${booking.customerPhone}</div>
+                            <div class="customer-phone">📅 ${formatDate(bookingDate)}</div>
+                            ${booking.customerNote ? `<div class="customer-note">💬 ${booking.customerNote}</div>` : ''}
+                        </div>
+                    `;
+                });
+                
+                customerListContent.innerHTML = html;
+            }
+            
+            // Listeyi göster
+            document.getElementById('customerList').style.display = 'block';
+        }
+
+        // Müşteri listesini gizle
+        window.hideCustomerList = function() {
+            document.getElementById('customerList').style.display = 'none';
+        };
 
         // Event listeners
         document.getElementById('adminToggle').onclick = function() {
