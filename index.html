@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Randevu Sistemi</title>
+    <title>Salon Çaçan Randevu Sistemi</title>
     <style>
         * {
             margin: 0;
@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
@@ -151,12 +151,28 @@
         .slot-booked {
             background: #fee2e2;
             color: #991b1b;
+            cursor: default;
+            font-weight: bold;
+        }
+
+        .slot-booked.admin-view {
             cursor: pointer;
         }
 
         .slot-blocked {
             background: #f3f4f6;
             color: #6b7280;
+            cursor: default;
+        }
+
+        .slot-blocked.admin-view {
+            cursor: pointer;
+        }
+
+        .slot-past {
+            background: #f3f4f6;
+            color: #9ca3af;
+            cursor: not-allowed;
         }
 
         .booking-form {
@@ -179,7 +195,8 @@
         }
 
         .form-group input,
-        .form-group select {
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #e5e7eb;
@@ -189,9 +206,21 @@
         }
 
         .form-group input:focus,
-        .form-group select:focus {
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
             border-color: #3b82f6;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .phone-error {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 5px;
         }
 
         .btn {
@@ -251,6 +280,25 @@
             display: none;
         }
 
+        .admin-block-form {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .block-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .block-controls select,
+        .block-controls input {
+            min-width: 120px;
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -296,6 +344,22 @@
             color: #991b1b;
         }
 
+        .booking-info {
+            background: #f0f9ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .note-display {
+            background: #fff7ed;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #f59e0b;
+        }
+
         @media (max-width: 768px) {
             .container {
                 margin: 0;
@@ -326,13 +390,18 @@
                 padding: 6px;
                 font-size: 11px;
             }
+
+            .block-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📅 Randevu Sistemi</h1>
+            <h1>📅 Salon Çaçan Randevu Sistemi</h1>
             <button class="admin-toggle" id="adminToggle">Admin Giriş</button>
             <div class="week-selector">
                 <button class="week-btn" id="prevWeek">← Önceki Hafta</button>
@@ -366,6 +435,29 @@
             <div class="admin-panel" id="adminPanel">
                 <h3>🛡️ Admin Paneli</h3>
                 <p>Admin modunda tüm randevu bilgilerini görebilir ve yönetebilirsiniz.</p>
+                
+                <div class="admin-block-form">
+                    <h4>Saat Aralığı Bloke Et</h4>
+                    <div class="block-controls">
+                        <select id="blockDay">
+                            <option value="">Gün Seçin</option>
+                            <option value="Pazartesi">Pazartesi</option>
+                            <option value="Salı">Salı</option>
+                            <option value="Çarşamba">Çarşamba</option>
+                            <option value="Perşembe">Perşembe</option>
+                            <option value="Cuma">Cuma</option>
+                            <option value="Cumartesi">Cumartesi</option>
+                        </select>
+                        <select id="blockStartTime">
+                            <option value="">Başlangıç Saati</option>
+                        </select>
+                        <select id="blockEndTime">
+                            <option value="">Bitiş Saati</option>
+                        </select>
+                        <button class="btn" onclick="blockTimeRange()">Bloke Et</button>
+                    </div>
+                </div>
+                
                 <button class="btn btn-danger" onclick="adminLogout()">Çıkış Yap</button>
             </div>
 
@@ -404,17 +496,38 @@
 
             <div class="booking-form" id="bookingForm">
                 <h3 id="formTitle">Randevu Al</h3>
+                <div style="background: #fef3c7; padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #f59e0b;">
+                    <div style="color: #92400e; font-size: 14px; font-weight: bold;">
+                        📝 İletişim İçin Bilgilerinizi Doğru Giriniz.
+                    </div>
+                </div>
                 <div class="form-group">
                     <label>Seçilen Saat:</label>
                     <input type="text" id="selectedTime" readonly>
+                    <div style="color: #ef4444; font-size: 12px; margin-top: 5px; font-weight: bold;">
+                        ⚠️ Randevu Saatinde 10-15 DK Farklılık Gösterilebilir.
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>İsim:</label>
-                    <input type="text" id="customerName" placeholder="İsminizi girin">
+                    <input type="text" id="customerName" placeholder="Ferhat ÇAÇAN">
                 </div>
                 <div class="form-group">
                     <label>Telefon:</label>
-                    <input type="tel" id="customerPhone" placeholder="Telefon numaranızı girin">
+                    <input type="tel" id="customerPhone" placeholder="0 544 922 07 19" maxlength="11">
+                    <div class="phone-error" id="phoneError"></div>
+                </div>
+                <div class="form-group">
+                    <label>Not (Opsiyonel):</label>
+                    <textarea id="customerNote" placeholder="Ek bilgi veya not..."></textarea>
+                </div>
+                <div id="existingBookingInfo" class="booking-info" style="display: none;">
+                    <h4>Mevcut Randevu Bilgileri:</h4>
+                    <p id="existingBookingDetails"></p>
+                </div>
+                <div id="noteDisplay" class="note-display" style="display: none;">
+                    <h4>Müşteri Notu:</h4>
+                    <p id="noteContent"></p>
                 </div>
                 <button class="btn" onclick="saveBooking()" id="saveBtn">Randevu Kaydet</button>
                 <button class="btn btn-danger" onclick="cancelBooking()" style="display:none;" id="cancelBtn">Randevu İptal</button>
@@ -456,14 +569,79 @@
             password: '211213'
         };
 
-        // Saat aralıkları
+        // Yeni saat aralıkları (30 dakika aralıklarla)
         const timeSlots = [
-            '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
-            '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'
+            '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+            '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+            '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
+            '19:00', '19:30', '20:00', '20:30', '21:00', '21:30'
         ];
 
         // Gün isimleri
         const dayNames = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+
+        // Telefon numarası doğrulama
+        function validatePhone(phone) {
+            const phoneRegex = /^05\d{9}$/;
+            return phoneRegex.test(phone);
+        }
+
+        // İsim normalizasyonu (büyük-küçük harf duyarsız)
+        function normalizeString(str) {
+            return str.toLowerCase().trim().replace(/\s+/g, ' ');
+        }
+
+        // Tarih karşılaştırma fonksiyonu
+        function isPastDate(dayName, weekOffset) {
+            const today = new Date();
+            const currentDay = today.getDay();
+            const currentTime = today.getHours() * 60 + today.getMinutes();
+            
+            // Bugünkü hafta mı?
+            if (weekOffset !== 0) {
+                return weekOffset < 0; // Geçmiş hafta
+            }
+            
+            // Bugünkü haftada hangi gün?
+            const dayIndex = dayNames.indexOf(dayName);
+            const targetDay = dayIndex + 1; // Pazartesi = 1, Salı = 2, ...
+            
+            if (currentDay === 0) { // Pazar
+                return targetDay < 7; // Cumartesi hariç hepsi geçmiş
+            } else {
+                return targetDay < currentDay; // Bugünden önceki günler
+            }
+        }
+
+        // Saatin geçmiş olup olmadığını kontrol et
+        function isPastTime(dayName, time, weekOffset) {
+            const today = new Date();
+            const currentDay = today.getDay();
+            const currentTime = today.getHours() * 60 + today.getMinutes();
+            
+            // Geçmiş hafta
+            if (weekOffset < 0) return true;
+            
+            // Gelecek hafta
+            if (weekOffset > 0) return false;
+            
+            // Bu hafta
+            const dayIndex = dayNames.indexOf(dayName);
+            const targetDay = dayIndex + 1;
+            
+            // Bugün değilse
+            if (currentDay === 0) { // Pazar
+                return targetDay < 7;
+            } else if (targetDay !== currentDay) {
+                return targetDay < currentDay;
+            }
+            
+            // Bugünse saate bak
+            const [hours, minutes] = time.split(':').map(Number);
+            const timeInMinutes = hours * 60 + minutes;
+            
+            return timeInMinutes <= currentTime;
+        }
 
         // Bildirim gösterme
         window.showNotification = function(message, isError = false) {
@@ -494,8 +672,77 @@
                 isAdmin = true;
                 document.getElementById('adminPanel').classList.add('show');
                 document.getElementById('adminToggle').textContent = 'Admin: Aktif';
+                populateBlockTimeSelects();
             }
         }
+
+        // Bloke etme saatleri doldur
+        function populateBlockTimeSelects() {
+            const startSelect = document.getElementById('blockStartTime');
+            const endSelect = document.getElementById('blockEndTime');
+            
+            startSelect.innerHTML = '<option value="">Başlangıç Saati</option>';
+            endSelect.innerHTML = '<option value="">Bitiş Saati</option>';
+            
+            timeSlots.forEach(time => {
+                startSelect.innerHTML += `<option value="${time}">${time}</option>`;
+                endSelect.innerHTML += `<option value="${time}">${time}</option>`;
+            });
+        }
+
+        // Saat aralığı bloke etme
+        window.blockTimeRange = async function() {
+            const day = document.getElementById('blockDay').value;
+            const startTime = document.getElementById('blockStartTime').value;
+            const endTime = document.getElementById('blockEndTime').value;
+            
+            if (!day || !startTime || !endTime) {
+                showNotification('Lütfen tüm alanları doldurun!', true);
+                return;
+            }
+            
+            const startIndex = timeSlots.indexOf(startTime);
+            const endIndex = timeSlots.indexOf(endTime);
+            
+            if (startIndex >= endIndex) {
+                showNotification('Bitiş saati başlangıç saatinden sonra olmalı!', true);
+                return;
+            }
+            
+            try {
+                const promises = [];
+                for (let i = startIndex; i <= endIndex; i++) {
+                    const time = timeSlots[i];
+                    const existingBooking = bookings.find(b => b.day === day && b.time === time);
+                    
+                    if (!existingBooking) {
+                        const blockData = {
+                            day: day,
+                            time: time,
+                            customerName: 'Bloke',
+                            customerPhone: '',
+                            customerNote: '',
+                            weekKey: getWeekKey(currentWeek),
+                            type: 'blocked',
+                            createdAt: new Date().toISOString()
+                        };
+                        promises.push(addDoc(collection(db, 'bookings'), blockData));
+                    }
+                }
+                
+                await Promise.all(promises);
+                showNotification(`${day} ${startTime}-${endTime} aralığı bloke edildi!`);
+                
+                // Formu temizle
+                document.getElementById('blockDay').value = '';
+                document.getElementById('blockStartTime').value = '';
+                document.getElementById('blockEndTime').value = '';
+                
+            } catch (error) {
+                console.error('Bloke etme hatası:', error);
+                showNotification('Bloke etme işlemi başarısız!', true);
+            }
+        };
 
         // Admin giriş
         window.adminLogin = function() {
@@ -508,6 +755,7 @@
                 document.getElementById('adminPanel').classList.add('show');
                 document.getElementById('adminLogin').style.display = 'none';
                 document.getElementById('adminToggle').textContent = 'Admin: Aktif';
+                populateBlockTimeSelects();
                 showNotification('Admin girişi başarılı!');
                 renderCalendar();
             } else {
@@ -636,22 +884,24 @@
                 dayNames.forEach((dayName, dayIndex) => {
                     const cell = document.createElement('td');
                     const booking = bookings.find(b => b.day === dayName && b.time === time);
+                    const isPast = isPastTime(dayName, time, currentWeek);
                     
-                    if (booking) {
+                    if (isPast) {
+                        cell.textContent = 'Geçmiş';
+                        cell.className = 'slot-past';
+                    } else if (booking) {
                         if (booking.type === 'blocked') {
                             cell.textContent = 'Bloke';
-                            cell.className = 'slot-blocked';
+                            cell.className = `slot-blocked ${isAdmin ? 'admin-view' : ''}`;
                             if (isAdmin) {
                                 cell.onclick = () => showBookingForm(dayName, time, booking);
                             }
                         } else {
+                            cell.textContent = 'Dolu';
+                            cell.className = `slot-booked ${isAdmin ? 'admin-view' : ''}`;
                             if (isAdmin) {
-                                cell.innerHTML = `${booking.customerName}<br><small>${booking.customerPhone}</small>`;
-                            } else {
-                                cell.textContent = booking.customerName;
+                                cell.onclick = () => showBookingForm(dayName, time, booking);
                             }
-                            cell.className = 'slot-booked';
-                            cell.onclick = () => showBookingForm(dayName, time, booking);
                         }
                     } else {
                         cell.textContent = 'Boş';
@@ -668,17 +918,18 @@
 
         // Randevu formu gösterme
         window.showBookingForm = function(day, time, existingBooking = null) {
-            // Aynı saat için başka randevu var mı kontrol et
+            // Geçmiş tarih kontrolü
+            if (isPastTime(day, time, currentWeek)) {
+                showNotification('Geçmiş tarihlere randevu verilemez!', true);
+                return;
+            }
+
+            // Dolu slot kontrolü (admin değilse)
             const slotBooking = bookings.find(b => b.day === day && b.time === time);
             
-            if (slotBooking && !existingBooking) {
-                if (slotBooking.type === 'blocked') {
-                    showNotification('Bu saat bloke edilmiştir!', true);
-                    return;
-                } else {
-                    showNotification('Bu saat zaten dolu!', true);
-                    return;
-                }
+            if (slotBooking && !existingBooking && !isAdmin) {
+                showNotification('Bu saat zaten dolu!', true);
+                return;
             }
 
             selectedSlot = { day, time };
@@ -686,6 +937,12 @@
             const form = document.getElementById('bookingForm');
             const formTitle = document.getElementById('formTitle');
             const cancelBtn = document.getElementById('cancelBtn');
+            const existingInfo = document.getElementById('existingBookingInfo');
+            const noteDisplay = document.getElementById('noteDisplay');
+            const phoneError = document.getElementById('phoneError');
+            
+            // Telefon hatası temizle
+            phoneError.textContent = '';
             
             document.getElementById('selectedTime').value = `${day} - ${time}`;
             
@@ -695,33 +952,110 @@
                         formTitle.textContent = 'Bloğu Kaldır';
                         document.getElementById('customerName').value = 'Bloke';
                         document.getElementById('customerPhone').value = '';
+                        document.getElementById('customerNote').value = '';
                         document.getElementById('customerName').disabled = true;
                         document.getElementById('customerPhone').disabled = true;
+                        document.getElementById('customerNote').disabled = true;
                         cancelBtn.style.display = 'inline-block';
+                        existingInfo.style.display = 'none';
+                        noteDisplay.style.display = 'none';
                     } else {
                         showNotification('Bu saat bloke edilmiştir!', true);
                         return;
                     }
                 } else {
-                    formTitle.textContent = 'Randevu Güncelle';
+                    formTitle.textContent = isAdmin ? 'Randevu Güncelle' : 'Randevu Bilgileri';
                     document.getElementById('customerName').value = existingBooking.customerName;
                     document.getElementById('customerPhone').value = existingBooking.customerPhone;
-                    document.getElementById('customerName').disabled = false;
-                    document.getElementById('customerPhone').disabled = false;
-                    cancelBtn.style.display = 'inline-block';
+                    document.getElementById('customerNote').value = existingBooking.customerNote || '';
+                    
+                    if (isAdmin) {
+                        document.getElementById('customerName').disabled = false;
+                        document.getElementById('customerPhone').disabled = false;
+                        document.getElementById('customerNote').disabled = false;
+                        cancelBtn.style.display = 'inline-block';
+                        
+                        // Admin için mevcut bilgileri göster
+                        existingInfo.style.display = 'block';
+                        document.getElementById('existingBookingDetails').innerHTML = 
+                            `<strong>İsim:</strong> ${existingBooking.customerName}<br>
+                             <strong>Telefon:</strong> ${existingBooking.customerPhone}<br>
+                             <strong>Randevu:</strong> ${existingBooking.day} - ${existingBooking.time}`;
+                        
+                        if (existingBooking.customerNote) {
+                            noteDisplay.style.display = 'block';
+                            document.getElementById('noteContent').textContent = existingBooking.customerNote;
+                        } else {
+                            noteDisplay.style.display = 'none';
+                        }
+                    } else {
+                        // Normal kullanıcı sadece kendi randevusunu iptal edebilir
+                        const canCancel = checkOwnership(existingBooking);
+                        document.getElementById('customerName').disabled = !canCancel;
+                        document.getElementById('customerPhone').disabled = !canCancel;
+                        document.getElementById('customerNote').disabled = !canCancel;
+                        cancelBtn.style.display = canCancel ? 'inline-block' : 'none';
+                        existingInfo.style.display = 'none';
+                        noteDisplay.style.display = 'none';
+                        
+                        if (!canCancel) {
+                            showNotification('Bu randevu size ait değil!', true);
+                        }
+                    }
                 }
                 selectedSlot.bookingId = existingBooking.id;
             } else {
                 formTitle.textContent = isAdmin ? 'Randevu Al / Bloke Et' : 'Randevu Al';
                 document.getElementById('customerName').value = '';
                 document.getElementById('customerPhone').value = '';
+                document.getElementById('customerNote').value = '';
                 document.getElementById('customerName').disabled = false;
                 document.getElementById('customerPhone').disabled = false;
+                document.getElementById('customerNote').disabled = false;
                 cancelBtn.style.display = 'none';
+                existingInfo.style.display = 'none';
+                noteDisplay.style.display = 'none';
             }
             
             form.style.display = 'block';
         };
+
+        // Randevu sahipliği kontrolü
+        function checkOwnership(booking) {
+            const currentName = prompt('Randevu sahibinin ismini girin:');
+            const currentPhone = prompt('Randevu sahibinin telefon numarasını girin:');
+            
+            if (!currentName || !currentPhone) return false;
+            
+            return normalizeString(currentName) === normalizeString(booking.customerName) && 
+                   currentPhone === booking.customerPhone;
+        }
+
+        // Telefon numarası kontrolü
+        function checkPhoneInput() {
+            const phone = document.getElementById('customerPhone').value;
+            const phoneError = document.getElementById('phoneError');
+            
+            if (phone && !validatePhone(phone)) {
+                phoneError.textContent = 'Telefon numarası 05XXXXXXXXX formatında olmalı (11 haneli)';
+                return false;
+            } else {
+                phoneError.textContent = '';
+                return true;
+            }
+        }
+
+        // Telefon input event listener
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('customerPhone').addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, ''); // Sadece sayılar
+                if (value.length > 11) {
+                    value = value.substring(0, 11);
+                }
+                e.target.value = value;
+                checkPhoneInput();
+            });
+        });
 
         // Randevu kaydetme
         window.saveBooking = async function() {
@@ -729,6 +1063,7 @@
             
             const name = document.getElementById('customerName').value.trim();
             const phone = document.getElementById('customerPhone').value.trim();
+            const note = document.getElementById('customerNote').value.trim();
             const saveBtn = document.getElementById('saveBtn');
             
             if (!name) {
@@ -736,9 +1071,16 @@
                 return;
             }
 
-            if (!phone && name !== 'Bloke') {
-                showNotification('Telefon alanı boş olamaz!', true);
-                return;
+            if (name !== 'Bloke') {
+                if (!phone) {
+                    showNotification('Telefon alanı boş olamaz!', true);
+                    return;
+                }
+
+                if (!validatePhone(phone)) {
+                    showNotification('Telefon numarası 05XXXXXXXXX formatında olmalı!', true);
+                    return;
+                }
             }
 
             // Çift kayıt önleme
@@ -758,16 +1100,29 @@
                     return;
                 }
 
-                // Aynı hafta içinde randevu kontrolü (admin değilse)
+                // Admin değilse kontroller
                 if (!isAdmin && name !== 'Bloke') {
-                    const existingBooking = bookings.find(b => 
-                        b.customerName === name && 
-                        b.customerPhone === phone && 
-                        b.type !== 'blocked'
+                    // Aynı isim kontrolü (büyük-küçük harf duyarsız)
+                    const existingNameBooking = bookings.find(b => 
+                        normalizeString(b.customerName) === normalizeString(name) && 
+                        b.type !== 'blocked' &&
+                        (!selectedSlot.bookingId || selectedSlot.bookingId !== b.id)
                     );
                     
-                    if (existingBooking && (!selectedSlot.bookingId || selectedSlot.bookingId !== existingBooking.id)) {
-                        showNotification('Bu hafta zaten randevunuz var!', true);
+                    if (existingNameBooking) {
+                        showNotification('Bu isimle bu hafta zaten randevu var!', true);
+                        return;
+                    }
+
+                    // Aynı telefon kontrolü
+                    const existingPhoneBooking = bookings.find(b => 
+                        b.customerPhone === phone && 
+                        b.type !== 'blocked' &&
+                        (!selectedSlot.bookingId || selectedSlot.bookingId !== b.id)
+                    );
+                    
+                    if (existingPhoneBooking) {
+                        showNotification('Bu telefon numarasıyla bu hafta zaten randevu var!', true);
                         return;
                     }
                 }
@@ -777,6 +1132,7 @@
                     time: selectedSlot.time,
                     customerName: name,
                     customerPhone: phone,
+                    customerNote: note,
                     weekKey: getWeekKey(currentWeek),
                     type: name === 'Bloke' ? 'blocked' : 'booking',
                     createdAt: new Date().toISOString()
@@ -808,6 +1164,19 @@
         window.cancelBooking = async function() {
             if (!selectedSlot.bookingId || isLoading) return;
             
+            const booking = bookings.find(b => b.id === selectedSlot.bookingId);
+            if (!booking) return;
+            
+            // Admin değilse sahiplik kontrolü
+            if (!isAdmin && !checkOwnership(booking)) {
+                showNotification('Bu randevuyu iptal etme yetkiniz yok!', true);
+                return;
+            }
+            
+            if (!confirm('Randevuyu iptal etmek istediğinizden emin misiniz?')) {
+                return;
+            }
+            
             try {
                 await deleteDoc(doc(db, 'bookings', selectedSlot.bookingId));
                 showNotification('Randevu iptal edildi!');
@@ -822,6 +1191,7 @@
         // Form gizleme
         window.hideBookingForm = function() {
             document.getElementById('bookingForm').style.display = 'none';
+            document.getElementById('phoneError').textContent = '';
             selectedSlot = null;
         };
 
